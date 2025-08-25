@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}นำเข้าข้อมูล - Movie Info App{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <h2 class="mb-4">
+        <i class="fas fa-plus me-2"></i>นำเข้าข้อมูลหนัง
+    </h2>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-upload me-2"></i>นำเข้าด้วย TMDB ID
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="movie_id" class="form-label">TMDB Movie ID</label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="movie_id" 
+                                   name="movie_id" 
+                                   placeholder="เช่น 1022787 (Elio)" 
+                                   required>
+                            <div class="form-text">
+                                ค้นหา TMDB ID ได้ที่ <a href="https://www.themoviedb.org" target="_blank">themoviedb.org</a>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-download me-2"></i>นำเข้าข้อมูล
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>ตัวอย่าง TMDB ID
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <strong>1022787</strong><br>
+                                    <small class="text-muted">Elio (2025)</small>
+                                </li>
+                                <li class="mb-2">
+                                    <strong>299536</strong><br>
+                                    <small class="text-muted">Avengers: Infinity War</small>
+                                </li>
+                                <li class="mb-2">
+                                    <strong>550</strong><br>
+                                    <small class="text-muted">Fight Club</small>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-6">
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <strong>13</strong><br>
+                                    <small class="text-muted">Forrest Gump</small>
+                                </li>
+                                <li class="mb-2">
+                                    <strong>680</strong><br>
+                                    <small class="text-muted">Pulp Fiction</small>
+                                </li>
+                                <li class="mb-2">
+                                    <strong>238</strong><br>
+                                    <small class="text-muted">The Godfather</small>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-search me-2"></i>ค้นหาและนำเข้า
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="search_query" class="form-label">ค้นหาหนัง</label>
+                        <div class="input-group">
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="search_query" 
+                                   placeholder="พิมพ์ชื่อหนัง...">
+                            <button class="btn btn-outline-primary" type="button" id="search_btn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="search_results" style="display: none;">
+                        <h6>ผลการค้นหา:</h6>
+                        <div id="results_list" class="mb-3"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>วิธีการใช้งาน
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        <li class="mb-2">ค้นหา TMDB ID ของหนังที่ต้องการ</li>
+                        <li class="mb-2">ใส่ TMDB ID ในช่องด้านซ้าย</li>
+                        <li class="mb-2">กดปุ่ม "นำเข้าข้อมูล"</li>
+                        <li class="mb-2">ระบบจะดึงข้อมูลจาก TMDB และบันทึกลงฐานข้อมูล</li>
+                        <li>หรือใช้ฟีเจอร์ค้นหาด้านขวาเพื่อค้นหาและนำเข้าข้อมูล</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-database me-2"></i>ข้อมูลที่นำเข้า
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>ชื่อหนัง (Title)
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>ปีที่เข้าฉาย (Year)
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>ชื่อต้นฉบับ (Original Title)
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>ประเภท (Genres) - 3 ประเภทแรก
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>ผู้กำกับ (Director) - 1 คน
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>นักแสดง (Cast) - 3 คนแรก
+                        </li>
+                        <li>
+                            <i class="fas fa-check text-success me-2"></i>Trailer ID (YouTube)
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchBtn = document.getElementById('search_btn');
+    const searchQuery = document.getElementById('search_query');
+    const searchResults = document.getElementById('search_results');
+    const resultsList = document.getElementById('results_list');
+    
+    // Search functionality
+    searchBtn.addEventListener('click', function() {
+        const query = searchQuery.value.trim();
+        if (!query) {
+            alert('กรุณาพิมพ์ชื่อหนังที่ต้องการค้นหา');
+            return;
+        }
+        
+        searchBtn.disabled = true;
+        searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        // Redirect to search page
+        window.location.href = `/search?q=${encodeURIComponent(query)}`;
+    });
+    
+    // Enter key to search
+    searchQuery.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchBtn.click();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}หน้าแรก - Movie Info App{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero-section">
+    <div class="container">
+        <h1 class="hero-title">🎬 Movie Info App</h1>
+        <p class="hero-subtitle">ระบบจัดการข้อมูลหนังจาก TMDB และ Supabase</p>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number">{{ movies|length }}</div>
+                    <div class="stats-label">หนังในระบบ</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number">∞</div>
+                    <div class="stats-label">หนังใน TMDB</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-number">24/7</div>
+                    <div class="stats-label">พร้อมใช้งาน</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+    <div class="row">
+        <div class="col-md-8">
+            <h2 class="mb-4">
+                <i class="fas fa-star me-2"></i>หนังล่าสุด
+            </h2>
+            
+            {% if movies %}
+                <div class="row">
+                    {% for movie in movies %}
+                    <div class="col-md-6 mb-4">
+                        <div class="movie-card">
+                            <div class="card-body">
+                                <h5 class="movie-title">{{ movie.title }}</h5>
+                                <p class="movie-year mb-2">
+                                    <i class="fas fa-calendar me-1"></i>{{ movie.year }}
+                                </p>
+                                {% if movie.director %}
+                                <p class="text-muted mb-2">
+                                    <i class="fas fa-user me-1"></i>{{ movie.director }}
+                                </p>
+                                {% endif %}
+                                {% if movie.genres %}
+                                <div class="movie-genres">
+                                    {% for genre in movie.genres %}
+                                    <span class="genre-badge">{{ genre }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <div class="mt-3">
+                                    <a href="{{ url_for('movie_detail', movie_id=movie.id) }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>ดูรายละเอียด
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="text-center mt-4">
+                    <a href="{{ url_for('movies') }}" class="btn btn-primary">
+                        <i class="fas fa-list me-2"></i>ดูหนังทั้งหมด
+                    </a>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-film fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">ยังไม่มีหนังในระบบ</h4>
+                    <p class="text-muted">เริ่มต้นโดยการนำเข้าข้อมูลหนังจาก TMDB</p>
+                    <a href="{{ url_for('import_movie') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>นำเข้าข้อมูล
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-search me-2"></i>ค้นหาหนัง
+                    </h5>
+                    <form action="{{ url_for('search') }}" method="GET">
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control search-box" name="q" placeholder="ชื่อหนัง..." required>
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-plus me-2"></i>นำเข้าข้อมูล
+                    </h5>
+                    <p class="card-text">นำเข้าข้อมูลหนังใหม่จาก TMDB</p>
+                    <a href="{{ url_for('import_movie') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>นำเข้าข้อมูล
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-info-circle me-2"></i>ข้อมูลระบบ
+                    </h5>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-database me-2"></i>Supabase Database</li>
+                        <li><i class="fas fa-film me-2"></i>TMDB API</li>
+                        <li><i class="fas fa-code me-2"></i>Flask Web Framework</li>
+                        <li><i class="fas fa-mobile-alt me-2"></i>Responsive Design</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

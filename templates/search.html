@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}ค้นหาหนัง - Movie Info App{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <h2 class="mb-4">
+        <i class="fas fa-search me-2"></i>ค้นหาหนัง
+    </h2>
+    
+    <!-- Search Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form action="{{ url_for('search') }}" method="GET">
+                <div class="input-group">
+                    <input type="text" 
+                           class="form-control search-box" 
+                           name="q" 
+                           value="{{ query }}" 
+                           placeholder="พิมพ์ชื่อหนังที่ต้องการค้นหา..." 
+                           required>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-search me-2"></i>ค้นหา
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    {% if query %}
+        <!-- Search Results -->
+        <div class="row">
+            <!-- Database Results -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-database me-2"></i>ผลลัพธ์ในฐานข้อมูล
+                            <span class="badge bg-primary ms-2">{{ movies|length }}</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if movies %}
+                            <div class="row">
+                                {% for movie in movies %}
+                                <div class="col-12 mb-3">
+                                    <div class="movie-card">
+                                        <div class="card-body">
+                                            <h6 class="movie-title">{{ movie.title }}</h6>
+                                            <p class="movie-year mb-2">
+                                                <i class="fas fa-calendar me-1"></i>{{ movie.year }}
+                                            </p>
+                                            {% if movie.director %}
+                                            <p class="text-muted mb-2">
+                                                <i class="fas fa-user me-1"></i>{{ movie.director }}
+                                            </p>
+                                            {% endif %}
+                                            {% if movie.genres %}
+                                            <div class="movie-genres">
+                                                {% for genre in movie.genres %}
+                                                <span class="genre-badge">{{ genre }}</span>
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                            <div class="mt-2">
+                                                <a href="{{ url_for('movie_detail', movie_id=movie.id) }}" class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-eye me-1"></i>ดูรายละเอียด
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-search fa-2x text-muted mb-3"></i>
+                                <p class="text-muted">ไม่พบหนังในฐานข้อมูล</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- TMDB Results -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-film me-2"></i>ผลลัพธ์จาก TMDB
+                            <span class="badge bg-success ms-2">{{ tmdb_results|length }}</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if tmdb_results %}
+                            <div class="row">
+                                {% for movie in tmdb_results %}
+                                <div class="col-12 mb-3">
+                                    <div class="movie-card">
+                                        <div class="card-body">
+                                            <h6 class="movie-title">{{ movie.title }}</h6>
+                                            <p class="movie-year mb-2">
+                                                <i class="fas fa-calendar me-1"></i>{{ movie.release_date[:4] if movie.release_date else 'N/A' }}
+                                            </p>
+                                            <p class="text-muted mb-2">
+                                                <i class="fas fa-star me-1"></i>{{ "%.1f"|format(movie.vote_average) if movie.vote_average else 'N/A' }}/10
+                                            </p>
+                                            {% if movie.overview %}
+                                            <p class="text-muted small mb-2">
+                                                {{ movie.overview[:100] }}...
+                                            </p>
+                                            {% endif %}
+                                            <div class="mt-2">
+                                                <button class="btn btn-success btn-sm import-btn" 
+                                                        data-movie-id="{{ movie.id }}"
+                                                        data-movie-title="{{ movie.title }}">
+                                                    <i class="fas fa-plus me-1"></i>นำเข้าข้อมูล
+                                                </button>
+                                                <a href="https://www.themoviedb.org/movie/{{ movie.id }}" 
+                                                   target="_blank" 
+                                                   class="btn btn-outline-secondary btn-sm">
+                                                    <i class="fas fa-external-link-alt me-1"></i>ดูใน TMDB
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-search fa-2x text-muted mb-3"></i>
+                                <p class="text-muted">ไม่พบหนังใน TMDB</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- Search Instructions -->
+        <div class="text-center py-5">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">ค้นหาหนังที่คุณต้องการ</h4>
+            <p class="text-muted">พิมพ์ชื่อหนังในช่องค้นหาด้านบนเพื่อค้นหาในฐานข้อมูลและ TMDB</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Import movie functionality
+    const importButtons = document.querySelectorAll('.import-btn');
+    
+    importButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const movieId = this.getAttribute('data-movie-id');
+            const movieTitle = this.getAttribute('data-movie-title');
+            
+            if (confirm(`ต้องการนำเข้าข้อมูลหนัง "${movieTitle}" หรือไม่?`)) {
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>กำลังนำเข้า...';
+                
+                fetch(`/api/import/${movieId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('นำเข้าข้อมูลสำเร็จ!');
+                            location.reload();
+                        } else {
+                            alert('เกิดข้อผิดพลาด: ' + data.message);
+                            this.disabled = false;
+                            this.innerHTML = '<i class="fas fa-plus me-1"></i>นำเข้าข้อมูล';
+                        }
+                    })
+                    .catch(error => {
+                        alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+                        this.disabled = false;
+                        this.innerHTML = '<i class="fas fa-plus me-1"></i>นำเข้าข้อมูล';
+                    });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

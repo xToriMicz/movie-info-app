@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Movie Info Collector",
+  "version": "1.0",
+  "description": "เก็บข้อมูลหนังจาก TMDB และส่งไปยัง Movie Info App",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.themoviedb.org/*",
+    "http://127.0.0.1:5000/*",
+    "http://localhost:5000/*"
+  ],
+  "action": {
+    "default_title": "Movie Info Collector - One Click Add"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.themoviedb.org/movie/*"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
