@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Movie Info to WordPress Helper",
+  "version": "1.0",
+  "description": "เครื่องมือช่วยกรอกข้อมูลหนังจาก Movie Info App ลงใน WordPress Post Editor",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:5000/*",
+    "https://movie-info-app.onrender.com/*",
+    "http://*/*",
+    "https://*/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Movie Info to WordPress Helper"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

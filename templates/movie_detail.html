@@ -5,7 +5,7 @@
 {% block content %}
 <div class="main-content">
     <div class="row">
-        <div class="col-md-8">
+                 <div class="col-md-9">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="{{ url_for('index') }}">หน้าแรก</a></li>
@@ -16,45 +16,54 @@
             
             <div class="card">
                 <div class="card-body">
-                    <h1 class="card-title mb-3">{{ movie.title }}</h1>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <img src="{{ movie.poster_url or url_for('static', filename='images/no-poster.jpg') }}" 
+                                 alt="{{ movie.title }}" 
+                                 class="img-fluid rounded movie-poster-detail">
+                        </div>
+                        <div class="col-md-8">
+                            <h1 class="card-title mb-3">{{ movie.title }}</h1>
                     
-                    {% if movie.original_title and movie.original_title != movie.title %}
-                    <p class="text-muted mb-3">
-                        <i class="fas fa-language me-1"></i>ชื่อต้นฉบับ: {{ movie.original_title }}
-                    </p>
-                    {% endif %}
-                    
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <p class="mb-2">
-                                <i class="fas fa-calendar me-2"></i>
-                                <strong>ปีที่เข้าฉาย:</strong> {{ movie.year }}
-                            </p>
-                            {% if movie.director %}
-                            <p class="mb-2">
-                                <i class="fas fa-user me-2"></i>
-                                <strong>ผู้กำกับ:</strong> {{ movie.director }}
+                            {% if movie.original_title and movie.original_title != movie.title %}
+                            <p class="text-muted mb-3">
+                                <i class="fas fa-language me-1"></i>ชื่อต้นฉบับ: {{ movie.original_title }}
                             </p>
                             {% endif %}
-                        </div>
-                        <div class="col-md-6">
-                            <p class="mb-2">
-                                <i class="fas fa-database me-2"></i>
-                                <strong>TMDB ID:</strong> {{ movie.tmdb_id }}
-                            </p>
-                            <p class="mb-2">
-                                <i class="fas fa-clock me-2"></i>
-                                <strong>เพิ่มเมื่อ:</strong> {{ movie.created_at if movie.created_at else 'N/A' }}
-                            </p>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <p class="mb-2">
+                                        <i class="fas fa-calendar me-2"></i>
+                                        <strong>ปีที่เข้าฉาย:</strong> {{ movie.formatted_year }}
+                                    </p>
+                                    {% if movie.director %}
+                                    <p class="mb-2">
+                                        <i class="fas fa-user me-2"></i>
+                                        <strong>ผู้กำกับ:</strong> {{ movie.director }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-2">
+                                        <i class="fas fa-database me-2"></i>
+                                        <strong>TMDB ID:</strong> {{ movie.tmdb_id }}
+                                    </p>
+                                    <p class="mb-2">
+                                        <i class="fas fa-clock me-2"></i>
+                                        <strong>เพิ่มเมื่อ:</strong> {{ movie.created_at if movie.created_at else 'N/A' }}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
-                    {% if movie.genres %}
+                    {% if movie.formatted_genres and movie.formatted_genres != 'ไม่ระบุประเภท' %}
                     <div class="mb-4">
                         <h5><i class="fas fa-tags me-2"></i>ประเภท</h5>
                         <div class="movie-genres">
-                            {% for genre in movie.genres %}
-                            <span class="genre-badge">{{ genre }}</span>
+                            {% for genre in movie.formatted_genres.split(', ') %}
+                            <span class="genre-badge">{{ genre.strip() }}</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -99,11 +108,88 @@
                         </div>
                     </div>
                     {% endif %}
+                    
+                    {% if movie.formatted_providers and movie.formatted_providers.has_providers %}
+                    <div class="mb-4">
+                        <h5><i class="fas fa-tv me-2"></i>สตรีมมิ่ง</h5>
+                        {% if movie.formatted_providers.streaming %}
+                        <h6 class="text-primary">สตรีมมิ่ง</h6>
+                        <div class="row">
+                            {% for provider in movie.formatted_providers.streaming %}
+                            <div class="col-md-3 col-sm-4 col-6 mb-3">
+                                <div class="provider-card text-center">
+                                    {% if provider.logo_path %}
+                                    <img src="{{ url_for('static', filename=provider.logo_path) }}" 
+                                         alt="{{ provider.provider_name }}" 
+                                         class="provider-logo">
+                                    {% else %}
+                                    <img src="{{ url_for('static', filename='images/no-logo.png') }}" 
+                                         alt="No Logo" 
+                                         class="provider-logo">
+                                    {% endif %}
+                                    <div class="provider-name mt-2">
+                                        <small>{{ provider.provider_name }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if movie.formatted_providers.rent %}
+                        <h6 class="text-warning mt-3">เช่า</h6>
+                        <div class="row">
+                            {% for provider in movie.formatted_providers.rent %}
+                            <div class="col-md-3 col-sm-4 col-6 mb-3">
+                                <div class="provider-card text-center">
+                                    {% if provider.logo_path %}
+                                    <img src="{{ url_for('static', filename=provider.logo_path) }}" 
+                                         alt="{{ provider.provider_name }}" 
+                                         class="provider-logo">
+                                    {% else %}
+                                    <img src="{{ url_for('static', filename='images/no-logo.png') }}" 
+                                         alt="No Logo" 
+                                         class="provider-logo">
+                                    {% endif %}
+                                    <div class="provider-name mt-2">
+                                        <small>{{ provider.provider_name }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if movie.formatted_providers.buy %}
+                        <h6 class="text-success mt-3">ซื้อ</h6>
+                        <div class="row">
+                            {% for provider in movie.formatted_providers.buy %}
+                            <div class="col-md-3 col-sm-4 col-6 mb-3">
+                                <div class="provider-card text-center">
+                                    {% if provider.logo_path %}
+                                    <img src="{{ url_for('static', filename=provider.logo_path) }}" 
+                                         alt="{{ provider.provider_name }}" 
+                                         class="provider-logo">
+                                    {% else %}
+                                    <img src="{{ url_for('static', filename='images/no-logo.png') }}" 
+                                         alt="No Logo" 
+                                         class="provider-logo">
+                                    {% endif %}
+                                    <div class="provider-name mt-2">
+                                        <small>{{ provider.provider_name }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
         
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">
@@ -116,7 +202,7 @@
                         </li>
                         <li class="mb-2">
                             <i class="fas fa-calendar me-2"></i>
-                            <strong>ปี:</strong> {{ movie.year }}
+                            <strong>ปี:</strong> {{ movie.formatted_year }}
                         </li>
                         {% if movie.director %}
                         <li class="mb-2">
@@ -140,6 +226,13 @@
                         <li class="mb-2">
                             <i class="fas fa-play me-2"></i>
                             <strong>Trailer:</strong> มี
+                        </li>
+                        {% endif %}
+                        {% if movie.formatted_providers and movie.formatted_providers.has_providers %}
+                        <li class="mb-2">
+                            <i class="fas fa-tv me-2"></i>
+                            <strong>สตรีมมิ่ง:</strong> 
+                            {% if movie.formatted_providers.streaming %}{{ movie.formatted_providers.streaming|length }}{% else %}0{% endif %} แพลตฟอร์ม
                         </li>
                         {% endif %}
                     </ul>

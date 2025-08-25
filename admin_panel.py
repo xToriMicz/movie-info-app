@@ -8,6 +8,7 @@ from security_middleware import security_middleware, rate_limiter
 from update_manager import MovieUpdateManager
 import os
 import json
+import time
 from datetime import datetime, timedelta
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -73,14 +74,14 @@ def dashboard():
     
     recent_ips.sort(key=lambda x: x['last_request'], reverse=True)
     
-            # สร้าง update manager
-        try:
-            update_manager = MovieUpdateManager()
-            update_stats = update_manager.get_update_statistics()
-        except Exception as e:
-            update_stats = {}
-        
-        return render_template('admin/dashboard.html', stats=stats, recent_ips=recent_ips[:10], update_stats=update_stats)
+    # สร้าง update manager
+    try:
+        update_manager = MovieUpdateManager()
+        update_stats = update_manager.get_update_statistics()
+    except Exception as e:
+        update_stats = {}
+    
+    return render_template('admin/dashboard.html', stats=stats, recent_ips=recent_ips[:10], update_stats=update_stats)
 
 @admin_bp.route('/security')
 @require_admin_auth
@@ -182,84 +183,81 @@ def clear_failed_attempts(ip):
     """ล้างประวัติ failed attempts ของ IP"""
     if ip in security_middleware.failed_attempts:
         del security_middleware.failed_attempts[ip]
-            return jsonify({'success': True, 'message': f'Failed attempts cleared for {ip}'})
-    
-    @admin_bp.route('/updates')
-    @require_admin_auth
-    def updates():
-        """หน้าจัดการการอัปเดตข้อมูล"""
-        try:
-            update_manager = MovieUpdateManager()
-            stats = update_manager.get_update_statistics()
-            return render_template('admin/updates.html', stats=stats)
-        except Exception as e:
-            return render_template('admin/updates.html', stats={}, error=str(e))
-    
-    @admin_bp.route('/api/update/all', methods=['POST'])
-    @require_admin_auth
-    def update_all_movies():
-        """API สำหรับอัปเดตหนังทั้งหมด"""
-        try:
-            force_update = request.json.get('force_update', False)
-            days_threshold = request.json.get('days_threshold', 7)
-            
-            update_manager = MovieUpdateManager()
-            result = update_manager.update_all_movies(force_update=force_update, days_threshold=days_threshold)
-            
-            return jsonify(result)
-        except Exception as e:
-            return jsonify({'success': False, 'message': f'Error: {str(e)}'})
-    
-    @admin_bp.route('/api/update/single', methods=['POST'])
-    @require_admin_auth
-    def update_single_movie():
-        """API สำหรับอัปเดตหนังเดียว"""
-        try:
-            tmdb_id = request.json.get('tmdb_id')
-            if not tmdb_id:
-                return jsonify({'success': False, 'message': 'TMDB ID required'})
-            
-            update_manager = MovieUpdateManager()
-            
-            # หา movie ในฐานข้อมูล
-            movie = update_manager.supabase.table('movies').select('id, title').eq('tmdb_id', tmdb_id).execute()
-            
-            if not movie.data:
-                return jsonify({'success': False, 'message': 'Movie not found in database'})
-            
-            db_movie_id = movie.data[0]['id']
-            result = update_manager.update_single_movie(db_movie_id, tmdb_id)
-            
-            return jsonify(result)
-        except Exception as e:
-            return jsonify({'success': False, 'message': f'Error: {str(e)}'})
-    
-    @admin_bp.route('/api/update/ids', methods=['POST'])
-    @require_admin_auth
-    def update_movies_by_ids():
-        """API สำหรับอัปเดตหนังตาม IDs"""
-        try:
-            tmdb_ids = request.json.get('tmdb_ids', [])
-            if not tmdb_ids:
-                return jsonify({'success': False, 'message': 'TMDB IDs required'})
-            
-            update_manager = MovieUpdateManager()
-            result = update_manager.update_movies_by_ids(tmdb_ids)
-            
-            return jsonify(result)
-        except Exception as e:
-            return jsonify({'success': False, 'message': f'Error: {str(e)}'})
-    
-    @admin_bp.route('/api/update/stats')
-    @require_admin_auth
-    def get_update_stats():
-        """API สำหรับดึงสถิติการอัปเดต"""
-        try:
-            update_manager = MovieUpdateManager()
-            stats = update_manager.get_update_statistics()
-            return jsonify({'success': True, 'stats': stats})
-        except Exception as e:
-            return jsonify({'success': False, 'message': f'Error: {str(e)}'})
-    
-    # ต้องเพิ่ม import time ที่ด้านบน
-    import time
+    return jsonify({'success': True, 'message': f'Failed attempts cleared for {ip}'})
+
+@admin_bp.route('/updates')
+@require_admin_auth
+def updates():
+    """หน้าจัดการการอัปเดตข้อมูล"""
+    try:
+        update_manager = MovieUpdateManager()
+        stats = update_manager.get_update_statistics()
+        return render_template('admin/updates.html', stats=stats)
+    except Exception as e:
+        return render_template('admin/updates.html', stats={}, error=str(e))
+
+@admin_bp.route('/api/update/all', methods=['POST'])
+@require_admin_auth
+def update_all_movies():
+    """API สำหรับอัปเดตหนังทั้งหมด"""
+    try:
+        force_update = request.json.get('force_update', False)
+        days_threshold = request.json.get('days_threshold', 7)
+        
+        update_manager = MovieUpdateManager()
+        result = update_manager.update_all_movies(force_update=force_update, days_threshold=days_threshold)
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'})
+
+@admin_bp.route('/api/update/single', methods=['POST'])
+@require_admin_auth
+def update_single_movie():
+    """API สำหรับอัปเดตหนังเดียว"""
+    try:
+        tmdb_id = request.json.get('tmdb_id')
+        if not tmdb_id:
+            return jsonify({'success': False, 'message': 'TMDB ID required'})
+        
+        update_manager = MovieUpdateManager()
+        
+        # หา movie ในฐานข้อมูล
+        movie = update_manager.supabase.table('movies').select('id, title').eq('tmdb_id', tmdb_id).execute()
+        
+        if not movie.data:
+            return jsonify({'success': False, 'message': 'Movie not found in database'})
+        
+        db_movie_id = movie.data[0]['id']
+        result = update_manager.update_single_movie(db_movie_id, tmdb_id)
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'})
+
+@admin_bp.route('/api/update/ids', methods=['POST'])
+@require_admin_auth
+def update_movies_by_ids():
+    """API สำหรับอัปเดตหนังตาม IDs"""
+    try:
+        tmdb_ids = request.json.get('tmdb_ids', [])
+        if not tmdb_ids:
+            return jsonify({'success': False, 'message': 'TMDB IDs required'})
+        
+        update_manager = MovieUpdateManager()
+        result = update_manager.update_movies_by_ids(tmdb_ids)
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'})
+
+@admin_bp.route('/api/update/stats')
+@require_admin_auth
+def get_update_stats():
+    """API สำหรับดึงสถิติการอัปเดต"""
+    try:
+        update_manager = MovieUpdateManager()
+        stats = update_manager.get_update_statistics()
+        return jsonify({'success': True, 'stats': stats})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'})

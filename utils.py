@@ -84,7 +84,7 @@ def download_and_save_provider_logo(logo_path: str, provider_id: int, size: str 
         Path ของไฟล์ที่บันทึกไว้ หรือ URL ต้นฉบับหากดาวน์โหลดไม่สำเร็จ
     """
     if not logo_path:
-        return '/static/images/no-logo.png'
+        return 'images/no-logo.png'
     
     try:
         # สร้างชื่อไฟล์
@@ -98,7 +98,7 @@ def download_and_save_provider_logo(logo_path: str, provider_id: int, size: str 
         
         # ตรวจสอบว่ามีไฟล์อยู่แล้วหรือไม่
         if file_path.exists():
-            return f'/static/images/providers/{filename}'
+            return f'images/providers/{filename}'
         
         # ดาวน์โหลดรูปภาพ
         tmdb_url = f"https://image.tmdb.org/t/p/{size}{logo_path}"
@@ -110,7 +110,7 @@ def download_and_save_provider_logo(logo_path: str, provider_id: int, size: str 
             f.write(response.content)
         
         print(f"Downloaded provider logo: {filename}")
-        return f'/static/images/providers/{filename}'
+        return f'images/providers/{filename}'
         
     except Exception as e:
         print(f"Error downloading provider logo: {e}")
@@ -129,7 +129,7 @@ def get_provider_logo_url(logo_path: str, size: str = 'w45') -> str:
         URL เต็มของ provider logo
     """
     if not logo_path:
-        return '/static/images/no-logo.png'
+        return 'images/no-logo.png'
     
     base_url = 'https://image.tmdb.org/t/p'
     return f"{base_url}/{size}{logo_path}"
@@ -163,12 +163,12 @@ def format_streaming_providers(providers_data: dict) -> dict:
     if 'streaming' in providers_data:
         formatted['streaming'] = [
             {
-                'name': provider.get('provider_name', ''),
-                'logo_url': download_and_save_provider_logo(
+                'provider_name': provider.get('provider_name', ''),
+                'logo_path': download_and_save_provider_logo(
                     provider.get('logo_path', ''), 
                     provider.get('provider_id', 0)
                 ),
-                'id': provider.get('provider_id', '')
+                'provider_id': provider.get('provider_id', '')
             }
             for provider in providers_data['streaming']
         ]
@@ -177,12 +177,12 @@ def format_streaming_providers(providers_data: dict) -> dict:
     if 'rent' in providers_data:
         formatted['rent'] = [
             {
-                'name': provider.get('provider_name', ''),
-                'logo_url': download_and_save_provider_logo(
+                'provider_name': provider.get('provider_name', ''),
+                'logo_path': download_and_save_provider_logo(
                     provider.get('logo_path', ''), 
                     provider.get('provider_id', 0)
                 ),
-                'id': provider.get('provider_id', '')
+                'provider_id': provider.get('provider_id', '')
             }
             for provider in providers_data['rent']
         ]
@@ -191,12 +191,12 @@ def format_streaming_providers(providers_data: dict) -> dict:
     if 'buy' in providers_data:
         formatted['buy'] = [
             {
-                'name': provider.get('provider_name', ''),
-                'logo_url': download_and_save_provider_logo(
+                'provider_name': provider.get('provider_name', ''),
+                'logo_path': download_and_save_provider_logo(
                     provider.get('logo_path', ''), 
                     provider.get('provider_id', 0)
                 ),
-                'id': provider.get('provider_id', '')
+                'provider_id': provider.get('provider_id', '')
             }
             for provider in providers_data['buy']
         ]
@@ -260,12 +260,12 @@ def format_year(year: str) -> str:
         return 'ไม่ระบุปี'
     return year
 
-def format_genres(genres: list) -> str:
+def format_genres(genres) -> str:
     """
     จัดรูปแบบประเภทหนัง
     
     Args:
-        genres: รายการประเภทหนัง
+        genres: รายการประเภทหนัง (list, string, หรือ None)
     
     Returns:
         ข้อความประเภทหนัง
@@ -273,14 +273,26 @@ def format_genres(genres: list) -> str:
     if not genres:
         return 'ไม่ระบุประเภท'
     
-    return ', '.join(genres)
+    # หากเป็น string ให้แปลงเป็น list
+    if isinstance(genres, str):
+        try:
+            import json
+            genres = json.loads(genres)
+        except:
+            return genres
+    
+    # หากเป็น list ให้ join
+    if isinstance(genres, list):
+        return ', '.join(genres)
+    
+    return str(genres)
 
-def format_cast(cast_data: list) -> str:
+def format_cast(cast_data) -> str:
     """
     จัดรูปแบบนักแสดง
     
     Args:
-        cast_data: ข้อมูลนักแสดง
+        cast_data: ข้อมูลนักแสดง (list, string, หรือ None)
     
     Returns:
         ข้อความนักแสดง
@@ -288,14 +300,29 @@ def format_cast(cast_data: list) -> str:
     if not cast_data:
         return 'ไม่ระบุนักแสดง'
     
-    cast_names = []
-    for person in cast_data:
-        name = person.get('name', '')
-        character = person.get('character', '')
-        if name:
-            if character:
-                cast_names.append(f"{name} ({character})")
-            else:
-                cast_names.append(name)
+    # หากเป็น string ให้แปลงเป็น list
+    if isinstance(cast_data, str):
+        try:
+            import json
+            cast_data = json.loads(cast_data)
+        except:
+            return cast_data
     
-    return ', '.join(cast_names[:3])  # จำกัด 3 คน
+    # หากเป็น list ให้ประมวลผล
+    if isinstance(cast_data, list):
+        cast_names = []
+        for person in cast_data:
+            if isinstance(person, dict):
+                name = person.get('name', '')
+                character = person.get('character', '')
+                if name:
+                    if character:
+                        cast_names.append(f"{name} ({character})")
+                    else:
+                        cast_names.append(name)
+            else:
+                cast_names.append(str(person))
+        
+        return ', '.join(cast_names[:3])  # จำกัด 3 คน
+    
+    return str(cast_data)

@@ -282,25 +282,50 @@ class SupabaseMovieManager:
         except Exception as e:
             return {'success': False, 'message': f'Error importing movie: {str(e)}'}
     
-    def get_movie_from_database(self, movie_id: int) -> Dict:
-        """ดึงข้อมูลหนังจาก Supabase"""
+    def get_movie_from_database(self, movie_id):
+        """ดึงข้อมูลหนังจากฐานข้อมูลตาม ID"""
         try:
-            movie = self.supabase.table('movies').select('*').eq('id', movie_id).execute()
+            response = self.supabase.table('movies').select('*').eq('id', movie_id).execute()
             
-            if movie.data:
-                return movie.data[0]
-            else:
-                return {}
+            if response.data:
+                row = response.data[0]
+                movie = type('Movie', (), {
+                    'id': row['id'],
+                    'title': row['title'],
+                    'original_title': row.get('original_title'),
+                    'year': row['year'],
+                    'director': row['director'],
+                    'genres': row['genres'],
+                    'cast_data': row.get('cast_data'),
+                    'poster_path': row['poster_path'],
+                    'trailer_id': row.get('trailer_id'),
+                    'tmdb_id': row['tmdb_id'],
+                    'streaming_providers': row.get('streaming_providers')
+                })()
                 
+                # จัดรูปแบบข้อมูล
+                movie.formatted_year = format_year(movie.year) if movie.year else None
+                movie.formatted_genres = format_genres(movie.genres) if movie.genres else None
+                movie.formatted_cast = format_cast(movie.cast_data) if movie.cast_data else None
+                movie.formatted_providers = format_streaming_providers(movie.streaming_providers) if movie.streaming_providers else None
+                
+                # สร้าง poster URL
+                if movie.poster_path:
+                    movie.poster_url = url_for('static', filename=movie.poster_path, _external=True)
+                
+                return movie
+            
+            return None
+            
         except Exception as e:
             print(f"Error getting movie from database: {e}")
-            return {}
+            return None
     
     def list_all_movies(self, limit: int = 50) -> List[Dict]:
         """แสดงรายการหนังทั้งหมดในฐานข้อมูล"""
         try:
             movies = self.supabase.table('movies').select(
-                'id, tmdb_id, title, year, director, genres, created_at'
+                'id, tmdb_id, title, year, director, genres, created_at, poster_path, streaming_providers'
             ).order('created_at', desc=True).limit(limit).execute()
             
             return movies.data
@@ -309,14 +334,35 @@ class SupabaseMovieManager:
             print(f"Error listing movies: {e}")
             return []
     
-    def search_movies(self, query: str) -> List[Dict]:
+    def search_movies(self, query: str, limit: int = 10) -> List[Dict]:
         """ค้นหาหนังในฐานข้อมูล"""
         try:
-            movies = self.supabase.table('movies').select(
-                'id, tmdb_id, title, year, director, genres'
-            ).ilike('title', f'%{query}%').execute()
+            response = self.supabase.table('movies').select(
+                'id, tmdb_id, title, year, director, genres, cast_data, poster_path, streaming_providers'
+            ).ilike('title', f'%{query}%').limit(limit).execute()
             
-            return movies.data
+            movies = []
+            for row in response.data:
+                movie = type('Movie', (), {
+                    'id': row['id'],
+                    'title': row['title'],
+                    'year': row['year'],
+                    'director': row['director'],
+                    'genres': row['genres'],
+                    'cast_data': row.get('cast_data'),
+                    'poster_path': row['poster_path'],
+                    'trailer_id': row.get('trailer_id'),
+                    'tmdb_id': row['tmdb_id']
+                })()
+                
+                # จัดรูปแบบข้อมูล
+                movie.formatted_year = format_year(movie.year) if movie.year else None
+                movie.formatted_genres = format_genres(movie.genres) if movie.genres else None
+                movie.formatted_cast = format_cast(movie.cast_data) if movie.cast_data else None
+                
+                movies.append(movie)
+            
+            return movies
             
         except Exception as e:
             print(f"Error searching movies: {e}")
@@ -374,18 +420,27 @@ def index():
         
         # เพิ่มข้อมูล poster และ providers สำหรับแต่ละหนัง
         for movie in movies:
-            # ดาวน์โหลดและบันทึก poster
-            movie['poster_url'] = download_and_save_poster(
-                movie.get('poster_path', ''), 
-                movie.get('tmdb_id', 0)
-            )
-            movie['formatted_genres'] = format_genres(movie.get('genres', []))
-            movie['formatted_cast'] = format_cast(movie.get('cast_data', []))
-            movie['formatted_year'] = format_year(movie.get('year', ''))
-            
-            # จัดรูปแบบ streaming providers
-            providers_data = movie.get('streaming_providers', {})
-            movie['formatted_providers'] = format_streaming_providers(providers_data)
+            try:
+                # ดาวน์โหลดและบันทึก poster
+                movie['poster_url'] = download_and_save_poster(
+                    movie.get('poster_path', ''), 
+                    movie.get('tmdb_id', 0)
+                )
+                movie['formatted_genres'] = format_genres(movie.get('genres', []))
+                movie['formatted_cast'] = format_cast(movie.get('cast_data', []))
+                movie['formatted_year'] = format_year(movie.get('year', ''))
+                
+                # จัดรูปแบบ streaming providers
+                providers_data = movie.get('streaming_providers', {})
+                movie['formatted_providers'] = format_streaming_providers(providers_data)
+            except Exception as e:
+                print(f"Error processing movie {movie.get('title', 'Unknown')}: {e}")
+                # ใช้ค่าเริ่มต้นหากเกิดข้อผิดพลาด
+                movie['poster_url'] = '/static/images/no-poster.jpg'
+                movie['formatted_genres'] = 'ไม่ระบุประเภท'
+                movie['formatted_cast'] = 'ไม่ระบุนักแสดง'
+                movie['formatted_year'] = 'ไม่ระบุปี'
+                movie['formatted_providers'] = {'streaming': [], 'rent': [], 'buy': [], 'has_providers': False}
         
         return render_template('index.html', movies=movies)
     except Exception as e:
@@ -399,6 +454,31 @@ def movies():
     
     try:
         movies = movie_manager.list_all_movies(50)
+        
+        # เพิ่มข้อมูล poster และ providers สำหรับแต่ละหนัง
+        for movie in movies:
+            try:
+                # ดาวน์โหลดและบันทึก poster
+                movie['poster_url'] = download_and_save_poster(
+                    movie.get('poster_path', ''), 
+                    movie.get('tmdb_id', 0)
+                )
+                movie['formatted_genres'] = format_genres(movie.get('genres', []))
+                movie['formatted_cast'] = format_cast(movie.get('cast_data', []))
+                movie['formatted_year'] = format_year(movie.get('year', ''))
+                
+                # จัดรูปแบบ streaming providers
+                providers_data = movie.get('streaming_providers', {})
+                movie['formatted_providers'] = format_streaming_providers(providers_data)
+            except Exception as e:
+                print(f"Error processing movie {movie.get('title', 'Unknown')}: {e}")
+                # ใช้ค่าเริ่มต้นหากเกิดข้อผิดพลาด
+                movie['poster_url'] = '/static/images/no-poster.jpg'
+                movie['formatted_genres'] = 'ไม่ระบุประเภท'
+                movie['formatted_cast'] = 'ไม่ระบุนักแสดง'
+                movie['formatted_year'] = 'ไม่ระบุปี'
+                movie['formatted_providers'] = {'streaming': [], 'rent': [], 'buy': [], 'has_providers': False}
+        
         return render_template('movies.html', movies=movies)
     except Exception as e:
         return render_template('error.html', message=f"Error loading movies: {str(e)}")
@@ -573,6 +653,90 @@ def api_movies():
         return jsonify({'success': True, 'movies': movies})
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error: {str(e)}'})
+
+@app.route('/api/search')
+def api_search():
+    """API สำหรับค้นหาหนัง"""
+    try:
+        query = request.args.get('q', '').strip()
+        
+        if not query:
+            return jsonify({
+                'success': False,
+                'error': 'กรุณาระบุคำค้นหา'
+            }), 400
+        
+        # ค้นหาหนังจากฐานข้อมูล
+        movies = movie_manager.search_movies(query)
+        
+        # จัดรูปแบบข้อมูลสำหรับ API
+        formatted_movies = []
+        for movie in movies:
+            formatted_movie = {
+                'id': movie.id,
+                'title': movie.title,
+                'formatted_year': movie.formatted_year,
+                'director': movie.director,
+                'formatted_genres': movie.formatted_genres,
+                'formatted_cast': movie.formatted_cast
+            }
+            formatted_movies.append(formatted_movie)
+        
+        return jsonify({
+            'success': True,
+            'movies': formatted_movies,
+            'count': len(formatted_movies)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/movie/<int:movie_id>')
+def api_movie_detail(movie_id):
+    """API สำหรับดึงข้อมูลหนังรายละเอียด"""
+    try:
+        # ดึงข้อมูลหนังจากฐานข้อมูล
+        movie = movie_manager.get_movie_from_database(movie_id)
+        
+        if not movie:
+            return jsonify({
+                'success': False,
+                'error': 'ไม่พบหนังที่ระบุ'
+            }), 404
+        
+        # จัดรูปแบบข้อมูลสำหรับ API
+        formatted_movie = {
+            'id': movie.id,
+            'title': movie.title,
+            'original_title': movie.original_title,
+            'year': movie.year,
+            'formatted_year': movie.formatted_year,
+            'director': movie.director,
+            'genres': movie.genres,
+            'formatted_genres': movie.formatted_genres,
+            'cast': movie.cast_data,
+            'formatted_cast': movie.formatted_cast,
+            'trailer_id': movie.trailer_id,
+            'tmdb_id': movie.tmdb_id,
+            'poster_path': movie.poster_path,
+            'poster_url': movie.poster_url,
+            'streaming_providers': movie.streaming_providers,
+            'formatted_providers': movie.formatted_providers
+        }
+        
+        return jsonify({
+            'success': True,
+            'movie': formatted_movie
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 # Register admin blueprint
 app.register_blueprint(admin_bp)

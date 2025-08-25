@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Movie Info App{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    Admin Dashboard
+                </h2>
+                <div>
+                    <a href="{{ url_for('admin.security') }}" class="btn btn-warning me-2">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        Security
+                    </a>
+                    <a href="{{ url_for('admin.updates') }}" class="btn btn-info me-2">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        Updates
+                    </a>
+                    <a href="{{ url_for('admin.logout') }}" class="btn btn-danger">
+                        <i class="fas fa-sign-out-alt me-2"></i>
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats.total_requests }}</h4>
+                            <p class="card-text">Total Requests</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-chart-line fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats.blacklisted_ips }}</h4>
+                            <p class="card-text">Blacklisted IPs</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-ban fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats.whitelisted_ips }}</h4>
+                            <p class="card-text">Whitelisted IPs</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ stats.suspicious_ips }}</h4>
+                            <p class="card-text">Suspicious IPs</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Stats -->
+    {% if update_stats %}
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        Update Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <p><strong>Total Movies:</strong> {{ update_stats.total_movies or 0 }}</p>
+                            <p><strong>Last Updated:</strong> {{ update_stats.last_updated or 'Never' }}</p>
+                        </div>
+                        <div class="col-6">
+                            <p><strong>Needs Update:</strong> {{ update_stats.needs_update or 0 }}</p>
+                            <p><strong>Update Interval:</strong> 24 hours</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" onclick="updateAllMovies()">
+                            <i class="fas fa-sync-alt me-2"></i>
+                            Update All Movies
+                        </button>
+                        <button class="btn btn-outline-info" onclick="checkUpdates()">
+                            <i class="fas fa-search me-2"></i>
+                            Check for Updates
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Recent Activity (Last Hour)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_ips %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>IP Address</th>
+                                    <th>Requests</th>
+                                    <th>Last Request</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ip in recent_ips %}
+                                <tr>
+                                    <td>
+                                        <code>{{ ip.ip }}</code>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ ip.requests_count }}</span>
+                                    </td>
+                                    <td>{{ ip.last_request.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning" onclick="addToBlacklist('{{ ip.ip }}')">
+                                            <i class="fas fa-ban"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-success" onclick="addToWhitelist('{{ ip.ip }}')">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No recent activity</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateAllMovies() {
+    if (confirm('Are you sure you want to update all movies? This may take some time.')) {
+        fetch('/admin/api/update/all', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Update started successfully!');
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+    }
+}
+
+function checkUpdates() {
+    fetch('/admin/api/update/check', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Found ' + data.needs_update + ' movies that need updates');
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+
+function addToBlacklist(ip) {
+    if (confirm('Add ' + ip + ' to blacklist?')) {
+        fetch('/admin/api/blacklist', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ip: ip})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('IP added to blacklist');
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+    }
+}
+
+function addToWhitelist(ip) {
+    if (confirm('Add ' + ip + ' to whitelist?')) {
+        fetch('/admin/api/whitelist', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ip: ip})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('IP added to whitelist');
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+    }
+}
+</script>
+{% endblock %}

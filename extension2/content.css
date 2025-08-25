@@ -1,0 +1,272 @@
+/* Content CSS สำหรับ extension2 */
+/* สไตล์สำหรับการแสดงผลในหน้าเว็บ */
+
+/* Notification สำหรับ extension */
+.movie-info-extension-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 10000;
+    font-family: 'Noto Sans Thai', sans-serif;
+    font-size: 14px;
+    max-width: 300px;
+    animation: slideIn 0.3s ease-out;
+}
+
+.movie-info-extension-notification.success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.movie-info-extension-notification.error {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+}
+
+.movie-info-extension-notification.warning {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: #212529;
+}
+
+/* Animation สำหรับ notification */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.movie-info-extension-notification.hide {
+    animation: slideOut 0.3s ease-in forwards;
+}
+
+/* ปุ่มปิด notification */
+.movie-info-extension-notification .close-btn {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 18px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.movie-info-extension-notification .close-btn:hover {
+    opacity: 1;
+}
+
+/* Highlight สำหรับข้อมูลที่ถูกดึง */
+.movie-info-extension-highlight {
+    background: rgba(102, 126, 234, 0.1) !important;
+    border: 2px solid #667eea !important;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.movie-info-extension-highlight:hover {
+    background: rgba(102, 126, 234, 0.2) !important;
+    transform: scale(1.02);
+}
+
+/* Loading indicator */
+.movie-info-extension-loading {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 20px 30px;
+    border-radius: 10px;
+    z-index: 10001;
+    font-family: 'Noto Sans Thai', sans-serif;
+    text-align: center;
+}
+
+.movie-info-extension-loading .spinner {
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Tooltip สำหรับข้อมูล */
+.movie-info-extension-tooltip {
+    position: absolute;
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 10002;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    max-width: 200px;
+    word-wrap: break-word;
+}
+
+.movie-info-extension-tooltip.show {
+    opacity: 1;
+}
+
+.movie-info-extension-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
+}
+
+/* ปุ่มสำหรับ extension */
+.movie-info-extension-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 10003;
+    transition: all 0.3s ease;
+}
+
+.movie-info-extension-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+
+.movie-info-extension-btn:active {
+    transform: scale(0.95);
+}
+
+/* Modal สำหรับแสดงข้อมูล */
+.movie-info-extension-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10004;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.movie-info-extension-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.movie-info-extension-modal-content {
+    background: white;
+    border-radius: 10px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    transform: scale(0.7);
+    transition: transform 0.3s ease;
+}
+
+.movie-info-extension-modal.show .movie-info-extension-modal-content {
+    transform: scale(1);
+}
+
+.movie-info-extension-modal-close {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.2s;
+}
+
+.movie-info-extension-modal-close:hover {
+    color: #333;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .movie-info-extension-notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+    
+    .movie-info-extension-btn {
+        bottom: 10px;
+        right: 10px;
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+    }
+    
+    .movie-info-extension-modal-content {
+        margin: 20px;
+        padding: 20px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .movie-info-extension-modal-content {
+        background: #2d3748;
+        color: white;
+    }
+    
+    .movie-info-extension-modal-close {
+        color: #a0aec0;
+    }
+    
+    .movie-info-extension-modal-close:hover {
+        color: white;
+    }
+}
