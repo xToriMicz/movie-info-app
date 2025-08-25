@@ -6,8 +6,12 @@ from dotenv import load_dotenv
 import requests
 from typing import Dict, List, Optional
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
+from collections import defaultdict
+import re
+from admin_panel import admin_bp
+from utils import get_poster_url, download_and_save_poster, format_streaming_providers, format_genres, format_cast, format_year
 
 # Load environment variables
 load_dotenv()
@@ -17,6 +21,64 @@ app.secret_key = 'your-secret-key-here'
 
 # Enable CORS for all routes
 CORS(app, origins=['chrome-extension://*', 'https://www.themoviedb.org'])
+
+# Rate limiting storage
+rate_limit_storage = defaultdict(list)
+MAX_REQUESTS_PER_MINUTE = 10  # จำกัด 10 ครั้งต่อนาที
+MAX_REQUESTS_PER_HOUR = 100   # จำกัด 100 ครั้งต่อชั่วโมง
+
+def check_rate_limit(ip_address):
+    """ตรวจสอบ rate limit สำหรับ IP address"""
+    current_time = time.time()
+    
+    # ลบข้อมูลเก่าออก (เกิน 1 ชั่วโมง)
+    rate_limit_storage[ip_address] = [
+        req_time for req_time in rate_limit_storage[ip_address]
+        if current_time - req_time < 3600
+    ]
+    
+    # ตรวจสอบจำนวนการเรียกใน 1 นาที
+    requests_last_minute = len([
+        req_time for req_time in rate_limit_storage[ip_address]
+        if current_time - req_time < 60
+    ])
+    
+    # ตรวจสอบจำนวนการเรียกใน 1 ชั่วโมง
+    requests_last_hour = len(rate_limit_storage[ip_address])
+    
+    if requests_last_minute >= MAX_REQUESTS_PER_MINUTE:
+        return False, "เกินจำนวนการเรียก API ต่อนาที (10 ครั้ง)"
+    
+    if requests_last_hour >= MAX_REQUESTS_PER_HOUR:
+        return False, "เกินจำนวนการเรียก API ต่อชั่วโมง (100 ครั้ง)"
+    
+    # เพิ่มการเรียกปัจจุบัน
+    rate_limit_storage[ip_address].append(current_time)
+    return True, "OK"
+
+def get_client_ip():
+    """ดึง IP address ของผู้ใช้"""
+    if request.headers.get('X-Forwarded-For'):
+        return request.headers.get('X-Forwarded-For').split(',')[0]
+    return request.remote_addr
+
+def validate_movie_id(movie_id):
+    """ตรวจสอบความถูกต้องของ Movie ID"""
+    if not movie_id or not str(movie_id).isdigit():
+        return False
+    movie_id_int = int(movie_id)
+    if movie_id_int <= 0 or movie_id_int > 999999999:  # จำกัดขนาด ID
+        return False
+    return True
+
+def sanitize_input(text):
+    """ทำความสะอาดข้อมูล input"""
+    if not text:
+        return ""
+    # ลบ HTML tags และ special characters ที่อันตราย
+    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r'[<>"\']', '', text)
+    return text.strip()
 
 class SupabaseMovieManager:
     def __init__(self):
@@ -83,6 +145,12 @@ class SupabaseMovieManager:
                 trailer_id = video['key']
                 break
         
+        # ดึง poster path
+        poster_path = movie_data.get('poster_path', '')
+        
+        # ดึง streaming providers (ถ้ามี)
+        streaming_providers = self.get_streaming_providers(movie_data.get('id'))
+        
         return {
             'tmdb_id': movie_data.get('id'),
             'title': title,
@@ -91,8 +159,69 @@ class SupabaseMovieManager:
             'genres': genres,
             'trailer_id': trailer_id,
             'director': director,
-            'cast_data': cast
+            'cast_data': cast,
+            'poster_path': poster_path,
+            'streaming_providers': streaming_providers
         }
+    
+    def get_streaming_providers(self, movie_id: int) -> Dict:
+        """ดึงข้อมูล streaming providers จาก TMDB"""
+        try:
+            url = f"{self.tmdb_base_url}/movie/{movie_id}/watch/providers"
+            params = {
+                'api_key': self.tmdb_api_key
+            }
+            
+            response = requests.get(url, params=params, timeout=30)
+            response.raise_for_status()
+            
+            data = response.json()
+            providers = {}
+            
+            # ดึง providers จากประเทศไทย (TH)
+            th_providers = data.get('results', {}).get('TH', {})
+            
+            # ดึง streaming providers
+            streaming = th_providers.get('flatrate', [])
+            if streaming:
+                providers['streaming'] = [
+                    {
+                        'provider_name': provider.get('provider_name', ''),
+                        'logo_path': provider.get('logo_path', ''),
+                        'provider_id': provider.get('provider_id', '')
+                    }
+                    for provider in streaming[:5]  # จำกัด 5 providers
+                ]
+            
+            # ดึง rent providers
+            rent = th_providers.get('rent', [])
+            if rent:
+                providers['rent'] = [
+                    {
+                        'provider_name': provider.get('provider_name', ''),
+                        'logo_path': provider.get('logo_path', ''),
+                        'provider_id': provider.get('provider_id', '')
+                    }
+                    for provider in rent[:5]
+                ]
+            
+            # ดึง buy providers
+            buy = th_providers.get('buy', [])
+            if buy:
+                providers['buy'] = [
+                    {
+                        'provider_name': provider.get('provider_name', ''),
+                        'logo_path': provider.get('logo_path', ''),
+                        'provider_id': provider.get('provider_id', '')
+                    }
+                    for provider in buy[:5]
+                ]
+            
+            return providers
+            
+        except Exception as e:
+            print(f"Error fetching streaming providers: {e}")
+            return {}
     
     def save_movie_to_database(self, movie_data: Dict) -> Optional[int]:
         """บันทึกข้อมูลหนังลง Supabase"""
@@ -108,7 +237,9 @@ class SupabaseMovieManager:
                 'genres': movie_data['genres'],
                 'trailer_id': movie_data['trailer_id'],
                 'director': movie_data['director'],
-                'cast_data': movie_data['cast_data']
+                'cast_data': movie_data['cast_data'],
+                'poster_path': movie_data.get('poster_path', ''),
+                'streaming_providers': movie_data.get('streaming_providers', {})
             }
             
             if existing.data:
@@ -210,6 +341,20 @@ class SupabaseMovieManager:
         except Exception as e:
             print(f"Error searching TMDB: {e}")
             return []
+    
+    def get_movie_by_tmdb_id(self, tmdb_id: int) -> Optional[Dict]:
+        """ตรวจสอบว่าหนังมีอยู่ในฐานข้อมูลแล้วหรือไม่"""
+        try:
+            movie = self.supabase.table('movies').select('id, title').eq('tmdb_id', tmdb_id).execute()
+            
+            if movie.data:
+                return movie.data[0]
+            else:
+                return None
+                
+        except Exception as e:
+            print(f"Error checking movie by TMDB ID: {e}")
+            return None
 
 # Initialize movie manager
 try:
@@ -226,6 +371,22 @@ def index():
     
     try:
         movies = movie_manager.list_all_movies(10)
+        
+        # เพิ่มข้อมูล poster และ providers สำหรับแต่ละหนัง
+        for movie in movies:
+            # ดาวน์โหลดและบันทึก poster
+            movie['poster_url'] = download_and_save_poster(
+                movie.get('poster_path', ''), 
+                movie.get('tmdb_id', 0)
+            )
+            movie['formatted_genres'] = format_genres(movie.get('genres', []))
+            movie['formatted_cast'] = format_cast(movie.get('cast_data', []))
+            movie['formatted_year'] = format_year(movie.get('year', ''))
+            
+            # จัดรูปแบบ streaming providers
+            providers_data = movie.get('streaming_providers', {})
+            movie['formatted_providers'] = format_streaming_providers(providers_data)
+        
         return render_template('index.html', movies=movies)
     except Exception as e:
         return render_template('error.html', message=f"Error loading movies: {str(e)}")
@@ -252,6 +413,19 @@ def movie_detail(movie_id):
         movie = movie_manager.get_movie_from_database(movie_id)
         if not movie:
             return render_template('error.html', message="Movie not found")
+        
+        # เพิ่มข้อมูล poster และ providers
+        movie['poster_url'] = download_and_save_poster(
+            movie.get('poster_path', ''), 
+            movie.get('tmdb_id', 0)
+        )
+        movie['formatted_genres'] = format_genres(movie.get('genres', []))
+        movie['formatted_cast'] = format_cast(movie.get('cast_data', []))
+        movie['formatted_year'] = format_year(movie.get('year', ''))
+        
+        # จัดรูปแบบ streaming providers
+        providers_data = movie.get('streaming_providers', {})
+        movie['formatted_providers'] = format_streaming_providers(providers_data)
         
         return render_template('movie_detail.html', movie=movie)
     except Exception as e:
@@ -314,14 +488,79 @@ def import_movie():
 @app.route('/api/import/<int:movie_id>')
 def api_import_movie(movie_id):
     """API สำหรับนำเข้าข้อมูล"""
-    if not movie_manager:
-        return jsonify({'success': False, 'message': 'Failed to connect to database'})
-    
     try:
+        # 1. ตรวจสอบ Rate Limit
+        client_ip = get_client_ip()
+        rate_limit_ok, rate_limit_msg = check_rate_limit(client_ip)
+        if not rate_limit_ok:
+            return jsonify({
+                'success': False,
+                'message': f'Rate limit exceeded: {rate_limit_msg}',
+                'error_type': 'rate_limit'
+            }), 429
+        
+        # 2. ตรวจสอบความถูกต้องของ Movie ID
+        if not validate_movie_id(movie_id):
+            return jsonify({
+                'success': False,
+                'message': 'Movie ID ไม่ถูกต้อง',
+                'error_type': 'invalid_id'
+            }), 400
+        
+        # 3. ตรวจสอบ User-Agent (ป้องกัน bot)
+        user_agent = request.headers.get('User-Agent', '')
+        if not user_agent or 'bot' in user_agent.lower():
+            return jsonify({
+                'success': False,
+                'message': 'Invalid request',
+                'error_type': 'invalid_agent'
+            }), 403
+        
+        # 4. ตรวจสอบการเชื่อมต่อ database
+        if not movie_manager:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to connect to database',
+                'error_type': 'database_error'
+            }), 500
+        
+        # 5. ตรวจสอบว่าหนังซ้ำหรือไม่
+        existing_movie = movie_manager.get_movie_by_tmdb_id(movie_id)
+        if existing_movie:
+            return jsonify({
+                'success': False,
+                'message': f'หนังนี้มีอยู่ในระบบแล้ว (ID: {movie_id})',
+                'error_type': 'duplicate'
+            }), 409
+        
+        # 6. นำเข้าข้อมูล
         result = movie_manager.import_movie(movie_id)
-        return jsonify(result)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': result['message'],
+                'movie_id': result.get('movie_id'),
+                'rate_limit_info': {
+                    'requests_this_minute': len([t for t in rate_limit_storage[client_ip] if time.time() - t < 60]),
+                    'requests_this_hour': len(rate_limit_storage[client_ip])
+                }
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': result['message'],
+                'error_type': 'import_error'
+            }), 400
+            
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Error: {str(e)}'})
+        # Log error สำหรับ debugging
+        print(f"Error importing movie {movie_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'เกิดข้อผิดพลาดภายในระบบ',
+            'error_type': 'internal_error'
+        }), 500
 
 @app.route('/api/movies')
 def api_movies():
@@ -334,6 +573,9 @@ def api_movies():
         return jsonify({'success': True, 'movies': movies})
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error: {str(e)}'})
+
+# Register admin blueprint
+app.register_blueprint(admin_bp)
 
 if __name__ == '__main__':
     # Get port from environment variable (for Render)

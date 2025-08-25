@@ -61,3 +61,7 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+# Downloaded images (to avoid pushing large files)
+static/images/posters/
+static/images/providers/

@@ -1,0 +1,38 @@
+{
+  "name": "movie-info-app",
+  "version": "1.0.0",
+  "description": "Movie Info App for Cloudflare Pages",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'No build step required'",
+    "dev": "python app.py"
+  },
+  "dependencies": {
+    "python": "3.9.16"
+  },
+  "build": {
+    "command": "pip install -r requirements.txt",
+    "output": "public",
+    "environment": {
+      "PYTHON_VERSION": "3.9.16"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
+  "headers": {
+    "/*": {
+      "X-Frame-Options": "DENY",
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+    }
+  }
+}

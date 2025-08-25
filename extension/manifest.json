@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Movie Info Collector",
+  "version": "1.0",
+  "description": "Collect movie information from TMDB and save to Movie Info App",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://www.themoviedb.org/*",
+    "https://movie-info-app.onrender.com/*"
+  ],
+  "action": {
+    "default_title": "Movie Info Collector"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.themoviedb.org/movie/*"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
